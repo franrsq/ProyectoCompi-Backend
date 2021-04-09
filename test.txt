@@ -1,0 +1,26 @@
+int x = 5;
+int y;
+y = 10;
+print("x=" + x + " y=" + y);
+array[5] = new int[5];
+
+class Point {
+    int x;
+    int y;
+};
+
+if (x == 6 || y == 10) {
+    print("Hola");
+}
+
+while (x == y) {
+    print("dfgf");
+}
+
+return 0;
+
+string xd = xd(5);
+
+string xd(int x) {
+    return "xd";
+}
