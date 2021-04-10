@@ -1,5 +1,7 @@
 package com.compi.pseudojava.models;
 
+import com.compi.generated.PseudoJavaParser;
+import com.compi.generated.PseudoJavaScanner;
 import org.antlr.v4.runtime.ANTLRErrorListener;
 import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.RecognitionException;
@@ -16,7 +18,13 @@ public class PseudoJavaErrorListener implements ANTLRErrorListener {
 
     @Override
     public void syntaxError(Recognizer<?, ?> recognizer, Object o, int i, int i1, String s, RecognitionException e) {
-        errors.add(s);
+        if (recognizer instanceof PseudoJavaScanner) {
+            errors.add("SCANNER ERROR - line " + i + ":" + i1 + " " + s);
+        } else if (recognizer instanceof PseudoJavaParser) {
+            errors.add("PARSER ERROR - line " + i + ":" + i1 + " " + s);
+        } else {
+            errors.add(s);
+        }
     }
 
     @Override
