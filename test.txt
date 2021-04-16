@@ -1,26 +1,14 @@
-int x = 5;
-int y;
-y = 10;
-print("x=" + x + " y=" + y);
-array[5] = new int[5];
-
-class Point {
+class Test {
     int x;
-    int y;
 };
 
-if (x == 6 || y == 10) {
-    print("Hola");
+void hello() {
+    Test t;
 }
 
-while (x == y) {
-    print("dfgf");
-}
+int x = 5;
+int[] array = new int[5];
 
-return 0;
-
-string xd = xd(5);
-
-string xd(int x) {
-    return "xd";
-}
+Test a = new Test();
+x = x * 2;
+int z = array[0];
