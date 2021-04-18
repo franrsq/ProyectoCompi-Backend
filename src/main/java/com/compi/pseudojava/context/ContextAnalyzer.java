@@ -40,6 +40,29 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitFunctionDeclAST(PseudoJavaParser.FunctionDeclASTContext ctx) {
+        String identifier = ctx.IDENTIFIER().getText();
+        if (functions.retrieve(identifier) != null) {
+            showError(String.format(ERROR_ALREADY_DEFINED, "function " + identifier),
+                    ctx.start.getLine(),
+                    ctx.start.getCharPositionInLine());
+        } else {
+            if (ctx.type() instanceof PseudoJavaParser.SmpTypeASTContext) {
+                functions.enter(identifier,
+                        new FunctionAttr(new VariableAttr(ctx.type().getText(), false)));
+            } else if (ctx.type() instanceof PseudoJavaParser.ArrTypeASTContext) {
+                functions.enter(identifier,
+                        new FunctionAttr(new VariableAttr(ctx.type().getText(), true)));
+            } else {
+                if (classes.retrieveCheckAllScopes(ctx.type().getText()) != null) {
+                    functions.enter(identifier,
+                            new FunctionAttr(new VariableAttr(ctx.type().getText(), false)));
+                } else {
+                    showError(String.format(ERROR_NOT_FOUND, "class " + ctx.type().getText()),
+                            ctx.start.getLine(),
+                            ctx.start.getCharPositionInLine());
+                }
+            }
+        }
         return super.visitFunctionDeclAST(ctx);
     }
 
