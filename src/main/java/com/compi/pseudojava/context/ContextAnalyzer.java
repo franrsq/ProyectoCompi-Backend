@@ -11,6 +11,8 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
             = "%s is already defined in the current scope";
     private static final String ERROR_NOT_FOUND
             = "can't find %s in the current scope";
+    private static final String ERROR_PARAMETERS_MATCH
+            = "function %s requires %s parameters";
 
     private IdentificationTable<VariableAttr> variables = new IdentificationTable<>();
     private IdentificationTable<FunctionAttr> functions = new IdentificationTable<>();
@@ -48,6 +50,32 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitFormalParamAST(PseudoJavaParser.FormalParamASTContext ctx) {
+        if (ctx.parent.parent instanceof PseudoJavaParser.FunctionDeclASTContext) {
+            String parentFunction =
+                    ((PseudoJavaParser.FunctionDeclASTContext) ctx.parent.parent).IDENTIFIER().getText();
+            if (functions.retrieve(parentFunction).retrieve(ctx.IDENTIFIER().getText()) != null) {
+                showError(String.format(ERROR_ALREADY_DEFINED, "param " + ctx.IDENTIFIER().getText()),
+                        ctx.start.getLine(),
+                        ctx.start.getCharPositionInLine());
+            } else {
+                if (ctx.type() instanceof PseudoJavaParser.SmpTypeASTContext) {
+                    functions.retrieve(parentFunction).enter(ctx.IDENTIFIER().getText(),
+                            new VariableAttr(ctx.type().getText(), false));
+                } else if (ctx.type() instanceof PseudoJavaParser.ArrTypeASTContext) {
+                    functions.retrieve(parentFunction).enter(ctx.IDENTIFIER().getText(),
+                            new VariableAttr(ctx.type().getText(), true));
+                } else {
+                    if (classes.retrieveCheckAllScopes(ctx.type().getText()) != null) {
+                        functions.retrieve(parentFunction).enter(ctx.IDENTIFIER().getText(),
+                                new VariableAttr(ctx.type().getText(), false));
+                    } else {
+                        showError(String.format(ERROR_NOT_FOUND, "class " + ctx.type().getText()),
+                                ctx.start.getLine(),
+                                ctx.start.getCharPositionInLine());
+                    }
+                }
+            }
+        }
         return super.visitFormalParamAST(ctx);
     }
 
@@ -82,7 +110,13 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
             classes.enter(identifier, new ClassAttr());
         }
 
-        return super.visitClassDeclAST(ctx);
+        variables.openScope();
+        classes.openScope();
+        Object object = super.visitClassDeclAST(ctx);
+        variables.closeScope();
+        classes.closeScope();
+
+        return object;
     }
 
     @Override
@@ -116,7 +150,7 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
                     variables.enter(identifier,
                             new VariableAttr(type, true));
                 }
-            } else if (parentClass == null) {
+            } else {
                 if (classes.retrieveCheckAllScopes(ctx.type().getText()) != null) {
                     variables.enter(identifier, new VariableAttr(ctx.type().getText(), false));
                 } else {
@@ -275,6 +309,22 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitFunctionCallAST(PseudoJavaParser.FunctionCallASTContext ctx) {
+        FunctionAttr functionAttr = functions.retrieve(ctx.IDENTIFIER().getText());
+        if (functionAttr == null) {
+            showError(String.format(ERROR_NOT_FOUND, "function " + ctx.IDENTIFIER().getText()),
+                    ctx.start.getLine(),
+                    ctx.start.getCharPositionInLine());
+        } else {
+            PseudoJavaParser.ActualParamsASTContext actualParams =
+                    (PseudoJavaParser.ActualParamsASTContext) ctx.actual_params();
+            int actualParamsSize = actualParams == null ? 0 : actualParams.expression().size();
+            if (functionAttr.parametersSize() != actualParamsSize) {
+                showError(String.format(ERROR_PARAMETERS_MATCH, ctx.IDENTIFIER().getText(),
+                        functionAttr.parametersSize()),
+                        ctx.start.getLine(),
+                        ctx.start.getCharPositionInLine());
+            }
+        }
         return super.visitFunctionCallAST(ctx);
     }
 

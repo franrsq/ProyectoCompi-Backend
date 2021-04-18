@@ -1,5 +1,6 @@
 package com.compi.pseudojava.context.attributes;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -7,25 +8,21 @@ public class FunctionAttr extends Attribute {
     private VariableAttr returnType;
     private Map<String, VariableAttr> parameters;
 
-    public FunctionAttr(VariableAttr returnType, Map<String, VariableAttr> parameters) {
+    public FunctionAttr(VariableAttr returnType) {
         this.returnType = returnType;
-        this.parameters = parameters;
+        this.parameters = new HashMap<>();
     }
 
-    public VariableAttr getReturnType() {
-        return returnType;
+    public VariableAttr retrieve(String name) {
+        return parameters.get(name);
     }
 
-    public void setReturnType(VariableAttr returnType) {
-        this.returnType = returnType;
+    public void enter(String name, VariableAttr variableAttr) {
+        parameters.put(name, variableAttr);
     }
 
-    public Map<String, VariableAttr> getParameters() {
-        return parameters;
-    }
-
-    public void setParameters(Map<String, VariableAttr> parameters) {
-        this.parameters = parameters;
+    public int parametersSize() {
+        return parameters.size();
     }
 
     @Override

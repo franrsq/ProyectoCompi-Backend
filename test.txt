@@ -1,10 +1,17 @@
-class Test {
-    int x;
+class A {
+    int z;
 };
 
-void hello() {
+class Test {
+    int x;
+    A a;
+};
+
+Test hello(int[] x, int y) {
     Test t;
 }
+
+int j = hello();
 
 int x = 5;
 int[] array = new int[5];
