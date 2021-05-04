@@ -137,12 +137,26 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitWhileAST(PseudoJavaParser.WhileASTContext ctx) {
-        return super.visitWhileAST(ctx);
+        VariableAttr type = (VariableAttr) visit(ctx.expression());
+        if (type.getType().equals("boolean")) {
+            return null;
+        }
+        showError(String.format(ERROR_EXPECTING_EXPRESSION, "boolean", type),
+                ctx.start.getLine(),
+                ctx.start.getCharPositionInLine());
+        return null;
     }
 
     @Override
     public Object visitIfAST(PseudoJavaParser.IfASTContext ctx) {
-        return super.visitIfAST(ctx);
+        VariableAttr type = (VariableAttr) visit(ctx.expression());
+        if (type.getType().equals("boolean")) {
+            return null;
+        }
+        showError(String.format(ERROR_EXPECTING_EXPRESSION, "boolean", type),
+                ctx.start.getLine(),
+                ctx.start.getCharPositionInLine());
+        return null;
     }
 
     // TODO: validate function always must return
@@ -177,7 +191,17 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitPrintAST(PseudoJavaParser.PrintASTContext ctx) {
-        return super.visitPrintAST(ctx);
+        try {
+            VariableAttr type = (VariableAttr) visit(ctx.expression());
+            if (type.getType().equals("string") && !type.isArray()) {
+                return null;
+            }
+            showError(String.format(ERROR_EXPECTING_EXPRESSION, "string", type),
+                    ctx.start.getLine(),
+                    ctx.start.getCharPositionInLine());
+        } catch (ContextException ignored) {
+        }
+        return null;
     }
 
     @Override
@@ -506,7 +530,36 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitActualParamsAST(PseudoJavaParser.ActualParamsASTContext ctx) {
-        return super.visitActualParamsAST(ctx);
+        PseudoJavaParser.FunctionCallASTContext funcParent =
+                (PseudoJavaParser.FunctionCallASTContext) ctx.parent;
+        FunctionAttr functionAttr = functions.retrieve(funcParent.IDENTIFIER().getText());
+
+        boolean error = false;
+        StringBuilder funcDeclStrBuilder = new StringBuilder(funcParent.IDENTIFIER().getText()).append("(");
+        StringBuilder funcCallStrBuilder = new StringBuilder(funcParent.IDENTIFIER().getText()).append("(");
+
+        for (int i = 0; i < ctx.expression().size(); i++) {
+            VariableAttr parameterAttr = functionAttr.getParamByIndex(i);
+            VariableAttr expressionAttr = (VariableAttr) visit(ctx.expression(i));
+            if (!parameterAttr.equals(expressionAttr)) {
+                error = true;
+                if (i != ctx.expression().size() - 1) {
+                    funcDeclStrBuilder.append(parameterAttr).append(", ");
+                    funcCallStrBuilder.append(expressionAttr).append(", ");
+                } else {
+                    funcDeclStrBuilder.append(parameterAttr).append(")");
+                    funcCallStrBuilder.append(expressionAttr).append(")");
+                }
+            }
+        }
+        if (error) {
+            showError(String.format(ERROR_FUNCTION_PARAMS, funcDeclStrBuilder,
+                    funcCallStrBuilder),
+                    funcParent.start.getLine(),
+                    funcParent.start.getCharPositionInLine() + 1);
+            throw new ContextException("Unexpected parameter");
+        }
+        return null;
     }
 
     @Override
