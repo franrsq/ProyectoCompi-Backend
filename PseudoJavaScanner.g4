@@ -42,6 +42,7 @@ UNDERSCORE : '_';
 SLASH : '/';
 MULTIPLICATION : '*';
 QUOTATION_MARKS : '"';
+SINGLE_QUOTE : '\'';
 
 // COMPLEJAS
 WHITESPACES : [ \r\t\n]+ -> skip;
@@ -50,10 +51,11 @@ IDENTIFIER : ( UNDERSCORE | LETTER ) (UNDERSCORE | LETTER | DIGIT)*;
 INT_LITERAL : DIGIT(DIGIT)*;
 REAL_LITERAL : DIGIT(DIGIT)* DOT (DIGIT)*
                     | DOT DIGIT (DIGIT)*;
-STRING_LITERAL : QUOTATION_MARKS (PRINTABLE)* QUOTATION_MARKS;
+STRING_LITERAL : QUOTATION_MARKS ('\\"' | '\'' | PRINTABLE)* QUOTATION_MARKS;
+CHAR_LITERAL : SINGLE_QUOTE ('"' | '\\\'' | PRINTABLE) SINGLE_QUOTE;
 
-fragment PRINTABLE : DIGIT|LETTER|' '| '!' | '"' | '#' | '$' | '%' | '&'
-                    | '\'' | '(' | ')' | '*' | '+' | ',' | '-' | '.' | '/' | ':' | ';'
+fragment PRINTABLE : DIGIT|LETTER|' '| '!' | '#' | '$' | '%' | '&'
+                    | '(' | ')' | '*' | '+' | ',' | '-' | '.' | '/' | ':' | ';'
                     | '<' | '=' | '>' | '?' | '@' | '[' | '\\' | ']' | '^' | '_' | '`'
                     | '{' | '|' | '}' | '~';
 

@@ -34,4 +34,12 @@ public class VariableAttr extends Attribute {
         VariableAttr that = (VariableAttr) o;
         return isArray == that.isArray && Objects.equals(type, that.type);
     }
+
+    @Override
+    public String toString() {
+        if (isArray) {
+            return type + "[]";
+        }
+        return type;
+    }
 }

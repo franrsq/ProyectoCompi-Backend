@@ -1,21 +1,7 @@
-class A {
-    int z;
-};
-
-class Test {
-    int x;
-    A a;
-};
-
-Test hello(int[] x, int y) {
-    Test t;
+int hello(int x, int y) {
+    return 1;
 }
 
-int j = hello();
+int x = hello('1', true);
 
-int x = 5;
-int[] array = new int[5];
-
-Test a = new Test();
-x = x * 2;
-int z = array[0];
+// expected hello(int, int) but received hello(char, boolean)

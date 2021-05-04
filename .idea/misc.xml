@@ -6,7 +6,7 @@
         <PerGrammarGenerationSettings>
           <option name="fileName" value="$PROJECT_DIR$/PseudoJavaParser.g4" />
           <option name="autoGen" value="true" />
-          <option name="outputDir" value="C:\Users\fran-\IdeaProjects\PseudoJava\src\main\java\" />
+          <option name="outputDir" value="C:\Users\fran-\IdeaProjects\ProyectoCompi-Backend\src\main\java" />
           <option name="libDir" value="" />
           <option name="encoding" value="" />
           <option name="pkg" value="com.compi.generated" />
@@ -17,7 +17,7 @@
         <PerGrammarGenerationSettings>
           <option name="fileName" value="$PROJECT_DIR$/PseudoJavaScanner.g4" />
           <option name="autoGen" value="true" />
-          <option name="outputDir" value="C:\Users\fran-\IdeaProjects\PseudoJava\src\main\java\" />
+          <option name="outputDir" value="C:\Users\fran-\IdeaProjects\ProyectoCompi-Backend\src\main\java" />
           <option name="libDir" value="" />
           <option name="encoding" value="" />
           <option name="pkg" value="com.compi.generated" />

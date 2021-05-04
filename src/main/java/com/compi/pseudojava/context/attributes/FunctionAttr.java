@@ -1,6 +1,6 @@
 package com.compi.pseudojava.context.attributes;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -10,7 +10,7 @@ public class FunctionAttr extends Attribute {
 
     public FunctionAttr(VariableAttr returnType) {
         this.returnType = returnType;
-        this.parameters = new HashMap<>();
+        this.parameters = new LinkedHashMap<>();
     }
 
     public VariableAttr retrieve(String name) {
@@ -23,6 +23,18 @@ public class FunctionAttr extends Attribute {
 
     public int parametersSize() {
         return parameters.size();
+    }
+
+    public VariableAttr getParamByIndex(int index) {
+        if (index > parameters.size() - 1) {
+            throw new IndexOutOfBoundsException("Index is greater than parameters size");
+        }
+
+        return parameters.get(parameters.keySet().toArray()[index]);
+    }
+
+    public VariableAttr getReturnType() {
+        return returnType;
     }
 
     @Override

@@ -1,4 +1,4 @@
-// Generated from C:/Users/fran-/IdeaProjects/PseudoJava\PseudoJavaParser.g4 by ANTLR 4.9.1
+// Generated from C:/Users/fran-/IdeaProjects/ProyectoCompi-Backend\PseudoJavaParser.g4 by ANTLR 4.9.1
 package com.compi.generated;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
@@ -178,7 +178,14 @@ public class PseudoJavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> 
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitFactorIDFactAST(PseudoJavaParser.FactorIDFactASTContext ctx) { return visitChildren(ctx); }
+	@Override public T visitIdFactAST(PseudoJavaParser.IdFactASTContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitObjectFactAST(PseudoJavaParser.ObjectFactASTContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -311,5 +318,33 @@ public class PseudoJavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> 
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
-	@Override public T visitLiteral(PseudoJavaParser.LiteralContext ctx) { return visitChildren(ctx); }
+	@Override public T visitIntLiteralAST(PseudoJavaParser.IntLiteralASTContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitRealLiteralAST(PseudoJavaParser.RealLiteralASTContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitBoolLiteralAST(PseudoJavaParser.BoolLiteralASTContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitStrLiteralAST(PseudoJavaParser.StrLiteralASTContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitCharLiteralAST(PseudoJavaParser.CharLiteralASTContext ctx) { return visitChildren(ctx); }
 }

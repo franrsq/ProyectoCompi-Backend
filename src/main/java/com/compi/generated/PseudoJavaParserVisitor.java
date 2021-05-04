@@ -1,4 +1,4 @@
-// Generated from C:/Users/fran-/IdeaProjects/PseudoJava\PseudoJavaParser.g4 by ANTLR 4.9.1
+// Generated from C:/Users/fran-/IdeaProjects/ProyectoCompi-Backend\PseudoJavaParser.g4 by ANTLR 4.9.1
 package com.compi.generated;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -170,12 +170,19 @@ public interface PseudoJavaParserVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitLiteralFactAST(PseudoJavaParser.LiteralFactASTContext ctx);
 	/**
-	 * Visit a parse tree produced by the {@code factorIDFactAST}
+	 * Visit a parse tree produced by the {@code idFactAST}
 	 * labeled alternative in {@link PseudoJavaParser#factor}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitFactorIDFactAST(PseudoJavaParser.FactorIDFactASTContext ctx);
+	T visitIdFactAST(PseudoJavaParser.IdFactASTContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code objectFactAST}
+	 * labeled alternative in {@link PseudoJavaParser#factor}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitObjectFactAST(PseudoJavaParser.ObjectFactASTContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code funcCallFactAST}
 	 * labeled alternative in {@link PseudoJavaParser#factor}.
@@ -300,9 +307,38 @@ public interface PseudoJavaParserVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitMultiplicative_op(PseudoJavaParser.Multiplicative_opContext ctx);
 	/**
-	 * Visit a parse tree produced by {@link PseudoJavaParser#literal}.
+	 * Visit a parse tree produced by the {@code intLiteralAST}
+	 * labeled alternative in {@link PseudoJavaParser#literal}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
 	 */
-	T visitLiteral(PseudoJavaParser.LiteralContext ctx);
+	T visitIntLiteralAST(PseudoJavaParser.IntLiteralASTContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code realLiteralAST}
+	 * labeled alternative in {@link PseudoJavaParser#literal}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitRealLiteralAST(PseudoJavaParser.RealLiteralASTContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code boolLiteralAST}
+	 * labeled alternative in {@link PseudoJavaParser#literal}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitBoolLiteralAST(PseudoJavaParser.BoolLiteralASTContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code strLiteralAST}
+	 * labeled alternative in {@link PseudoJavaParser#literal}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitStrLiteralAST(PseudoJavaParser.StrLiteralASTContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code charLiteralAST}
+	 * labeled alternative in {@link PseudoJavaParser#literal}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitCharLiteralAST(PseudoJavaParser.CharLiteralASTContext ctx);
 }
