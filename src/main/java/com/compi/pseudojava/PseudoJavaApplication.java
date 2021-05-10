@@ -92,4 +92,12 @@ public class PseudoJavaApplication {
                 .collect(Collectors.toList()));
         return new ResponseEntity<>(map, HttpStatus.OK);
     }
+
+    @PostMapping("/resetAST")
+    public ResponseEntity<Map<String, Object>> resetAST() {
+        contextAnalyzer = new ContextAnalyzer();
+        HashMap<String, Object> map = new HashMap<>(1);
+        map.put("status", "AST reseted");
+        return new ResponseEntity<>(map, HttpStatus.OK);
+    }
 }
