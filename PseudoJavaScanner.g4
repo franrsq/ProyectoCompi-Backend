@@ -10,6 +10,7 @@ CLASS : 'class';
 BOOLEAN : 'boolean';
 CHAR : 'char';
 INT : 'int';
+REAL : 'real';
 STRING : 'string';
 LENGTH : 'length';
 TRUE : 'true';

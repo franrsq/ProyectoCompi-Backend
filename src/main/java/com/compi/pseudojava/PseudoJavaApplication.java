@@ -20,15 +20,18 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import javax.swing.*;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @SpringBootApplication
 @RestController
 public class PseudoJavaApplication {
+    ContextAnalyzer contextAnalyzer = new ContextAnalyzer();
+
     public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
         CharStream input = CharStreams.fromFileName("test.txt");
         PseudoJavaScanner inst = new PseudoJavaScanner(input);
@@ -62,9 +65,14 @@ public class PseudoJavaApplication {
     }
 
     @PostMapping("/parseSnippet")
-    public ResponseEntity<Map<String, Object>> parseSnippet(@RequestBody Snippet snippet) {
+    public ResponseEntity<Map<String, Object>> parseSnippet(@RequestBody Snippet snippet)
+            throws IOException, ClassNotFoundException {
         if (snippet.getCode() == null) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+
+        if (snippet.resetAST()) {
+            contextAnalyzer = new ContextAnalyzer();
         }
         CharStream input = CharStreams.fromString(snippet.getCode());
         PseudoJavaScanner inst = new PseudoJavaScanner(input);
@@ -73,12 +81,15 @@ public class PseudoJavaApplication {
         PseudoJavaErrorListener errorListener = new PseudoJavaErrorListener();
         parser.addErrorListener(errorListener);
         ParseTree tree = parser.program();
-        ContextAnalyzer contextAnalyzer = new ContextAnalyzer();
-        contextAnalyzer.visit(tree);
+        ContextAnalyzer backup = contextAnalyzer.makeClone();
+        backup.visit(tree);
+        if (backup.getErrors().isEmpty()) {
+            contextAnalyzer = backup;
+        }
 
-        System.out.println(snippet.getCode());
         HashMap<String, Object> map = new HashMap<>(1);
-        map.put("errors", errorListener.getErrors());
+        map.put("errors", Stream.concat(errorListener.getErrors().stream(), backup.getErrors().stream())
+                .collect(Collectors.toList()));
         return new ResponseEntity<>(map, HttpStatus.OK);
     }
 }

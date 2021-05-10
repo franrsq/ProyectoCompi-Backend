@@ -1,7 +1,71 @@
-int hello(int x, int y) {
-    return 1;
+boolean d;
+char x = 'A';
+
+int [] f(boolean o, int g, boolean z)
+{
+    boolean b;
+    int x;
+    int [] a;
+    {
+      print("codigo de f");
+      d = false;
+      x = -9;
+      a = new int[x];
+    }
+    return a;
 }
 
-int x = hello('1', true);
+int metodo()
+{
+    int x;
+    {
+      boolean y = true;
+      print("codigo" + "de metodo");
+      print(x * y); //ERROR DE TIPOS INCOMPATIBLES
+    }
+    return true; //ERROR DE TIPO DE RETORNO
+}
 
-// expected hello(int, int) but received hello(char, boolean)
+int metodo() //ERROR DE METODO YA DECLARADO
+{
+    return 2;
+}
+
+class hola{
+    int x;
+    char y;
+    string tira;
+};
+
+boolean k()
+{
+    boolean b;
+    boolean r;
+    int x;
+    hola j;
+    int [] a;
+    {
+      print("codigo de k...");
+      x = 5;
+      r = false;
+      d = true;
+      j = new hola();
+
+      if ((x < 1) || (x == 1))
+      { a = new int[x]; }
+      else
+      { a = new int[j.y]; } //ERROR DE TIPOS
+    }
+
+    a = f(true,10,x,2); // DOBLE ERROR, DE TIPOS Y DE CANTIDAD DE PARÁMETROS
+    a = f(true,10,r);
+
+    j.x = a[x];
+    a[2] = '6'; //ERROR DE TIPOS
+    a[true] = 5; //ERROR DE TIPOS
+
+    operacion = 15; //ERROR DE VARIABLE NO DECLARADA
+
+    // return d; //ERROR PORQUE LA FUNCIÓN DEBE TENER RETURN, PROBAR QUITANDO COMENTARIO INICIAL
+  }
+}

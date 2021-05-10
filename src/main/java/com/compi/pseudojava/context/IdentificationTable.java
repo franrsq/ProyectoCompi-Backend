@@ -2,11 +2,12 @@ package com.compi.pseudojava.context;
 
 import com.compi.pseudojava.context.attributes.Attribute;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
-public class IdentificationTable<T extends Attribute> {
+public class IdentificationTable<T extends Attribute> implements Serializable {
     private LinkedList<Map<String, T>> scopes = new LinkedList<>();
 
     public IdentificationTable() {

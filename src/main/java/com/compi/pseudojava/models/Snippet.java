@@ -5,6 +5,7 @@ import javax.persistence.Entity;
 @Entity
 public class Snippet {
     private String code;
+    private boolean resetAST;
 
     public Snippet() {
 
@@ -20,5 +21,13 @@ public class Snippet {
 
     public void setCode(String code) {
         this.code = code;
+    }
+
+    public boolean resetAST() {
+        return resetAST;
+    }
+
+    public void setResetAST(boolean resetAST) {
+        this.resetAST = resetAST;
     }
 }

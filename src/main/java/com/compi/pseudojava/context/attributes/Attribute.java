@@ -1,4 +1,6 @@
 package com.compi.pseudojava.context.attributes;
 
-public abstract class Attribute {
+import java.io.Serializable;
+
+public abstract class Attribute implements Serializable {
 }

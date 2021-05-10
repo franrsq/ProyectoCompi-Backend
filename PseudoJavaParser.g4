@@ -32,11 +32,12 @@ type                        : simple_type                                       
                                 | array_type                                                #arrTypeAST
                                 | IDENTIFIER                                                #idTypeAST;
 simple_type                 : BOOLEAN
+                                | REAL
                                 | CHAR
 	                            | INT
 	                            | STRING                                                    #simpleTypeAST;
 array_type                  : simple_type OPEN_BRACKET CLOSED_BRACKET                       #arrayTypeAST;
-assignment                  : IDENTIFIER ASSIGN expression                                  #assignmentAST;
+assignment                  : IDENTIFIER (DOT IDENTIFIER)? ASSIGN expression                #assignmentAST;
 array_assignment            : IDENTIFIER
                             OPEN_BRACKET expression CLOSED_BRACKET ASSIGN expression        #arrayAssignmentAST;
 expression                  : simple_expression (relational_op simple_expression)*          #expressionAST;
@@ -52,7 +53,7 @@ factor                      : literal                                           
                                 | array_allocation_expression                               #arrAllocFactAST
                                 | allocation_expression                                     #allocFactAST
                                 | unary                                                     #unaryFactAST;
-unary                       : (SUM | MINUS | NEAGTE ) (expression)*                         #unaryAST;
+unary                       : (SUM | MINUS | NEAGTE ) expression                            #unaryAST;
 allocation_expression       : NEW IDENTIFIER  OPEN_PARENTHESIS CLOSED_PARENTHESIS           #allocAST;
 array_allocation_expression : NEW simple_type OPEN_BRACKET expression CLOSED_BRACKET        #arrayAllocAST;
 sub_expression              : OPEN_PARENTHESIS expression CLOSED_PARENTHESIS                #subExpAST;

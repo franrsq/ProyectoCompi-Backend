@@ -8,7 +8,11 @@ import com.compi.pseudojava.context.attributes.VariableAttr;
 import com.compi.pseudojava.context.exceptions.ContextException;
 import org.antlr.v4.runtime.RuleContext;
 
-public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> implements Serializable {
     private static final String ERROR_ALREADY_DEFINED
             = "%s is already defined in the current scope";
     private static final String ERROR_NOT_FOUND
@@ -27,10 +31,14 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
             = "return statement must be in a function";
     private static final String ERROR_FUNCTION_PARAMS
             = "Expecting call to %s but received %s";
+    private static final String ERROR_RETURN_LAST
+            = "There is unreachable code below";
 
     private IdentificationTable<VariableAttr> variables;
     private IdentificationTable<FunctionAttr> functions;
     private IdentificationTable<ClassAttr> classes;
+
+    private final List<String> errors = new ArrayList<>();
 
     public ContextAnalyzer() {
         variables = new IdentificationTable<>();
@@ -65,10 +73,32 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
     public Object visitBlockAST(PseudoJavaParser.BlockASTContext ctx) {
         variables.openScope();
         classes.openScope();
-        Object object = super.visitBlockAST(ctx);
+        functions.openScope();
+
+        VariableAttr variableAttr = null;
+        for (int i = 0; i < ctx.statement().size(); i++) {
+            PseudoJavaParser.StatementContext stContext = ctx.statement(i);
+
+            // It's return
+            if (stContext.return_statement() != null) {
+                // It's not the last line of the block
+                if (i != ctx.statement().size() - 1) {
+                    showError(ERROR_RETURN_LAST,
+                            ctx.start.getLine(),
+                            ctx.start.getCharPositionInLine());
+                } else {
+                    variableAttr = (VariableAttr) visit(stContext);
+                }
+            } else {
+                visit(stContext);
+            }
+        }
+
         variables.closeScope();
         classes.closeScope();
-        return object;
+        functions.closeScope();
+
+        return variableAttr;
     }
 
     @Override
@@ -83,8 +113,9 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
                 functions.enter(identifier,
                         new FunctionAttr(new VariableAttr(ctx.type().getText(), false)));
             } else if (ctx.type() instanceof PseudoJavaParser.ArrTypeASTContext) {
+                String type = ctx.type().getText().substring(0, ctx.type().getText().indexOf('[')).trim();
                 functions.enter(identifier,
-                        new FunctionAttr(new VariableAttr(ctx.type().getText(), true)));
+                        new FunctionAttr(new VariableAttr(type, true)));
             } else {
                 if (classes.retrieveCheckAllScopes(ctx.type().getText()) != null) {
                     functions.enter(identifier,
@@ -109,20 +140,20 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
         if (ctx.parent.parent instanceof PseudoJavaParser.FunctionDeclASTContext) {
             String parentFunction =
                     ((PseudoJavaParser.FunctionDeclASTContext) ctx.parent.parent).IDENTIFIER().getText();
-            if (functions.retrieve(parentFunction).retrieve(ctx.IDENTIFIER().getText()) != null) {
+            if (functions.retrieveCheckAllScopes(parentFunction).retrieve(ctx.IDENTIFIER().getText()) != null) {
                 showError(String.format(ERROR_ALREADY_DEFINED, "param " + ctx.IDENTIFIER().getText()),
                         ctx.start.getLine(),
                         ctx.start.getCharPositionInLine());
             } else {
                 if (ctx.type() instanceof PseudoJavaParser.SmpTypeASTContext) {
-                    functions.retrieve(parentFunction).enter(ctx.IDENTIFIER().getText(),
+                    functions.retrieveCheckAllScopes(parentFunction).enter(ctx.IDENTIFIER().getText(),
                             new VariableAttr(ctx.type().getText(), false));
                 } else if (ctx.type() instanceof PseudoJavaParser.ArrTypeASTContext) {
-                    functions.retrieve(parentFunction).enter(ctx.IDENTIFIER().getText(),
+                    functions.retrieveCheckAllScopes(parentFunction).enter(ctx.IDENTIFIER().getText(),
                             new VariableAttr(ctx.type().getText(), true));
                 } else {
                     if (classes.retrieveCheckAllScopes(ctx.type().getText()) != null) {
-                        functions.retrieve(parentFunction).enter(ctx.IDENTIFIER().getText(),
+                        functions.retrieveCheckAllScopes(parentFunction).enter(ctx.IDENTIFIER().getText(),
                                 new VariableAttr(ctx.type().getText(), false));
                     } else {
                         showError(String.format(ERROR_NOT_FOUND, "class " + ctx.type().getText()),
@@ -137,25 +168,35 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitWhileAST(PseudoJavaParser.WhileASTContext ctx) {
-        VariableAttr type = (VariableAttr) visit(ctx.expression());
-        if (type.getType().equals("boolean")) {
-            return null;
+        try {
+            VariableAttr type = (VariableAttr) visit(ctx.expression());
+            if (!type.getType().equals("boolean")) {
+                showError(String.format(ERROR_EXPECTING_EXPRESSION, "boolean", type),
+                        ctx.start.getLine(),
+                        ctx.start.getCharPositionInLine());
+            }
+        } catch (ContextException ignored) {
         }
-        showError(String.format(ERROR_EXPECTING_EXPRESSION, "boolean", type),
-                ctx.start.getLine(),
-                ctx.start.getCharPositionInLine());
-        return null;
+        return visit(ctx.block());
     }
 
     @Override
     public Object visitIfAST(PseudoJavaParser.IfASTContext ctx) {
-        VariableAttr type = (VariableAttr) visit(ctx.expression());
-        if (type.getType().equals("boolean")) {
-            return null;
+        try {
+            VariableAttr type = (VariableAttr) visit(ctx.expression());
+            if (!type.getType().equals("boolean")) {
+                showError(String.format(ERROR_EXPECTING_EXPRESSION, "boolean", type),
+                        ctx.start.getLine(),
+                        ctx.start.getCharPositionInLine());
+            }
+        } catch (ContextException ignored) {
         }
-        showError(String.format(ERROR_EXPECTING_EXPRESSION, "boolean", type),
-                ctx.start.getLine(),
-                ctx.start.getCharPositionInLine());
+        if (ctx.block(0) != null) {
+            visit(ctx.block(0));
+        }
+        if (ctx.block(1) != null) {
+            visit(ctx.block(1));
+        }
         return null;
     }
 
@@ -177,7 +218,7 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
         try {
             VariableAttr expresionAttr = (VariableAttr) visit(ctx.expression());
             String funcId = ((PseudoJavaParser.FunctionDeclASTContext) functionParent).IDENTIFIER().getText();
-            VariableAttr funcAttr = functions.retrieve(funcId).getReturnType();
+            VariableAttr funcAttr = functions.retrieveCheckAllScopes(funcId).getReturnType();
             if (!funcAttr.equals(expresionAttr)) {
                 showError(String.format(ERROR_EXPECTING_EXPRESSION, funcAttr, expresionAttr),
                         ctx.start.getLine(),
@@ -309,24 +350,39 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitAssignmentAST(PseudoJavaParser.AssignmentASTContext ctx) {
-        String identifier = ctx.IDENTIFIER().getText();
+        String identifier = ctx.IDENTIFIER(0).getText();
         VariableAttr variableAttr = variables.retrieveCheckAllScopes(identifier);
 
         if (variableAttr == null) {
             showError(String.format(ERROR_NOT_FOUND, "variable " + identifier),
                     ctx.start.getLine(),
                     ctx.start.getCharPositionInLine());
+            return null;
         }
 
-        try {
-            VariableAttr expresionAttr = (VariableAttr) visit(ctx.expression());
-            if (!expresionAttr.equals(variableAttr)) {
-                showError(String.format(ERROR_EXPECTING_EXPRESSION, variableAttr, expresionAttr),
+        if (ctx.IDENTIFIER(1) != null) {
+            ClassAttr classAttr = classes.retrieveCheckAllScopes(variableAttr.getType());
+            String memberId = ctx.IDENTIFIER(1).getText();
+
+            String className = variableAttr.getType();
+            variableAttr = classAttr != null ? classAttr.retrieve(memberId) : null;
+
+            if (variableAttr == null) {
+                showError(String.format(ERROR_NOT_MEMBER_CLASS, memberId, className),
                         ctx.start.getLine(),
                         ctx.start.getCharPositionInLine());
+                return null;
             }
-        } catch (ContextException ignored) {
         }
+            try {
+                VariableAttr expresionAttr = (VariableAttr) visit(ctx.expression());
+                if (!expresionAttr.equals(variableAttr)) {
+                    showError(String.format(ERROR_EXPECTING_EXPRESSION, variableAttr, expresionAttr),
+                            ctx.start.getLine(),
+                            ctx.start.getCharPositionInLine());
+                }
+            } catch (ContextException ignored) {
+            }
 
         return null;
     }
@@ -334,13 +390,33 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
     @Override
     public Object visitArrayAssignmentAST(PseudoJavaParser.ArrayAssignmentASTContext ctx) {
         String identifier = ctx.IDENTIFIER().getText();
-        if (variables.retrieveCheckAllScopes(identifier) == null) {
+        VariableAttr variable = variables.retrieveCheckAllScopes(identifier);
+        if (variable == null) {
             showError(String.format(ERROR_NOT_FOUND, "variable " + identifier),
                     ctx.start.getLine(),
                     ctx.start.getCharPositionInLine());
+            return null;
         }
 
-        return super.visitArrayAssignmentAST(ctx);
+        try {
+            VariableAttr indexExpression = (VariableAttr) visit(ctx.expression(0));
+            if (!indexExpression.getType().equals("int") || indexExpression.isArray()) {
+                showError(String.format(ERROR_EXPECTING_EXPRESSION, "int", indexExpression),
+                        ctx.start.getLine(),
+                        ctx.start.getCharPositionInLine());
+                return null;
+            }
+            VariableAttr assignExpression = (VariableAttr) visit(ctx.expression(1));
+            if (!assignExpression.getType().equals(variable.getType()) || indexExpression.isArray()) {
+                showError(String.format(ERROR_EXPECTING_EXPRESSION, variable.getType(), assignExpression),
+                        ctx.start.getLine(),
+                        ctx.start.getCharPositionInLine());
+                return null;
+            }
+        } catch (ContextException ignored) {
+        }
+
+        return new VariableAttr(variable.getType(), false);
     }
 
     @Override
@@ -466,7 +542,6 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
         return super.visitAllocFactAST(ctx);
     }
 
-    // TODO: preguntar que es
     @Override
     public Object visitUnaryFactAST(PseudoJavaParser.UnaryFactASTContext ctx) {
         return super.visitUnaryFactAST(ctx);
@@ -474,7 +549,23 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitUnaryAST(PseudoJavaParser.UnaryASTContext ctx) {
-        return super.visitUnaryAST(ctx);
+        String operator = (ctx.MINUS() != null) ? ctx.MINUS().getText() :
+                (ctx.SUM() != null) ? ctx.SUM().getText() : ctx.NEAGTE().getText();
+        // Unary + - (int) (int) / (real) (real)
+        VariableAttr variableAttr = (VariableAttr) visit(ctx.expression());
+        if ((operator.equals("+") || operator.equals("-"))
+                && (variableAttr.getType().equals("int")
+                || variableAttr.getType().equals("real"))) {
+            return variableAttr;
+        } else if (operator.equals("!") && variableAttr.getType().equals("boolean")) {
+            // Unary ! (boolean) (boolean)
+            return variableAttr;
+        }
+        showError(String.format(ERROR_EXPECTING_EXPRESSION,
+                operator.equals("!") ? "boolean" : "int or real", variableAttr),
+                ctx.start.getLine(),
+                ctx.start.getCharPositionInLine());
+        throw new ContextException("Wrong expression");
     }
 
     @Override
@@ -492,6 +583,17 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitArrayAllocAST(PseudoJavaParser.ArrayAllocASTContext ctx) {
+        try {
+            VariableAttr expresionnAttr = (VariableAttr) visit(ctx.expression());
+            if (!expresionnAttr.getType().equals("int") || expresionnAttr.isArray()) {
+                showError(String.format(ERROR_EXPECTING_EXPRESSION, "int", expresionnAttr),
+                        ctx.start.getLine(),
+                        ctx.start.getCharPositionInLine());
+                throw new ContextException("Array index must be int");
+            }
+        } catch (ContextException ignored) {
+        }
+
         return new VariableAttr(ctx.simple_type().getText(), true);
     }
 
@@ -502,7 +604,7 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitFunctionCallAST(PseudoJavaParser.FunctionCallASTContext ctx) {
-        FunctionAttr functionAttr = functions.retrieve(ctx.IDENTIFIER().getText());
+        FunctionAttr functionAttr = functions.retrieveCheckAllScopes(ctx.IDENTIFIER().getText());
         if (functionAttr == null) {
             showError(String.format(ERROR_NOT_FOUND, "function " + ctx.IDENTIFIER().getText()),
                     ctx.start.getLine(),
@@ -532,7 +634,7 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
     public Object visitActualParamsAST(PseudoJavaParser.ActualParamsASTContext ctx) {
         PseudoJavaParser.FunctionCallASTContext funcParent =
                 (PseudoJavaParser.FunctionCallASTContext) ctx.parent;
-        FunctionAttr functionAttr = functions.retrieve(funcParent.IDENTIFIER().getText());
+        FunctionAttr functionAttr = functions.retrieveCheckAllScopes(funcParent.IDENTIFIER().getText());
 
         boolean error = false;
         StringBuilder funcDeclStrBuilder = new StringBuilder(funcParent.IDENTIFIER().getText()).append("(");
@@ -583,7 +685,7 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
         } catch (ContextException ignored) {
         }
 
-        return variable;
+        return new VariableAttr(variable.getType(), false);
     }
 
     @Override
@@ -639,10 +741,6 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
         return new VariableAttr("char", false);
     }
 
-    private void showError(String error, int line, int col) {
-        System.out.println(String.format("line %s:%s %s", line, col, error));
-    }
-
     private VariableAttr checkOperators(VariableAttr variableAttr1, VariableAttr variableAttr2,
                                         String operator, int line, int col) {
         // String concatenation
@@ -651,9 +749,10 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
                 && variableAttr1.equals(variableAttr2)) {
             return variableAttr1;
         }
-        // Basic operations (int) (int)
+        // Basic operations (int) (int) / (real) (real)
         if ((operator.equals("+") || operator.equals("-") || operator.equals("*") || operator.equals("/"))
-                && (variableAttr1.getType().equals("int") && !variableAttr1.isArray())
+                && ((variableAttr1.getType().equals("int")
+                || variableAttr1.getType().equals("real")) && !variableAttr1.isArray())
                 && variableAttr1.equals(variableAttr2)) {
             return variableAttr1;
         }
@@ -679,5 +778,24 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> {
                 line,
                 col);
         throw new ContextException("Parameters are not compatible with operator");
+    }
+
+    private void showError(String error, int line, int col) {
+        System.out.println(String.format("AST ERROR - line %s:%s %s", line, col, error));
+        errors.add(String.format("AST ERROR - line %s:%s %s", line, col, error));
+    }
+
+    public ContextAnalyzer makeClone() throws IOException, ClassNotFoundException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ObjectOutputStream out = new ObjectOutputStream(outputStream);
+        out.writeObject(this);
+
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(outputStream.toByteArray());
+        ObjectInputStream in = new ObjectInputStream(inputStream);
+        return (ContextAnalyzer) in.readObject();
+    }
+
+    public List<String> getErrors() {
+        return errors;
     }
 }
