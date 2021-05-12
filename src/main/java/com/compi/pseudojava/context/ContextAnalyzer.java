@@ -33,6 +33,8 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
             = "Expecting call to %s but received %s";
     private static final String ERROR_RETURN_LAST
             = "There is unreachable code below";
+    private static final String ERROR_MISSING_RETURN
+            = "Missing return for function %s";
 
     private IdentificationTable<VariableAttr> variables;
     private IdentificationTable<FunctionAttr> functions;
@@ -75,7 +77,7 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
         classes.openScope();
         functions.openScope();
 
-        VariableAttr variableAttr = null;
+        boolean returnStatement = false;
         for (int i = 0; i < ctx.statement().size(); i++) {
             PseudoJavaParser.StatementContext stContext = ctx.statement(i);
 
@@ -86,19 +88,17 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
                     showError(ERROR_RETURN_LAST,
                             ctx.start.getLine(),
                             ctx.start.getCharPositionInLine());
-                } else {
-                    variableAttr = (VariableAttr) visit(stContext);
                 }
-            } else {
-                visit(stContext);
+                returnStatement = true;
             }
+            visit(stContext);
         }
 
         variables.closeScope();
         classes.closeScope();
         functions.closeScope();
 
-        return variableAttr;
+        return returnStatement;
     }
 
     @Override
@@ -127,7 +127,19 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
                 }
             }
         }
-        return super.visitFunctionDeclAST(ctx);
+
+        visit(ctx.type());
+        if (ctx.formal_params() != null) {
+            visit(ctx.formal_params());
+        }
+        boolean hasReturn = (boolean) visit(ctx.block());
+        if (!hasReturn) {
+            showError(String.format(ERROR_MISSING_RETURN, ctx.IDENTIFIER()),
+                    ctx.stop.getLine(),
+                    ctx.stop.getCharPositionInLine());
+        }
+
+        return null;
     }
 
     @Override
@@ -200,7 +212,6 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
         return null;
     }
 
-    // TODO: validate function always must return
     @Override
     public Object visitReturnAST(PseudoJavaParser.ReturnASTContext ctx) {
         RuleContext functionParent = ctx;
@@ -218,9 +229,9 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
         try {
             VariableAttr expresionAttr = (VariableAttr) visit(ctx.expression());
             String funcId = ((PseudoJavaParser.FunctionDeclASTContext) functionParent).IDENTIFIER().getText();
-            VariableAttr funcAttr = functions.retrieveCheckAllScopes(funcId).getReturnType();
-            if (!funcAttr.equals(expresionAttr)) {
-                showError(String.format(ERROR_EXPECTING_EXPRESSION, funcAttr, expresionAttr),
+            VariableAttr funcReturnAttr = functions.retrieveCheckAllScopes(funcId).getReturnType();
+            if (!funcReturnAttr.equals(expresionAttr)) {
+                showError(String.format(ERROR_EXPECTING_EXPRESSION, funcReturnAttr, expresionAttr),
                         ctx.start.getLine(),
                         ctx.start.getCharPositionInLine());
             }
@@ -374,15 +385,15 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
                 return null;
             }
         }
-            try {
-                VariableAttr expresionAttr = (VariableAttr) visit(ctx.expression());
-                if (!expresionAttr.equals(variableAttr)) {
-                    showError(String.format(ERROR_EXPECTING_EXPRESSION, variableAttr, expresionAttr),
-                            ctx.start.getLine(),
-                            ctx.start.getCharPositionInLine());
-                }
-            } catch (ContextException ignored) {
+        try {
+            VariableAttr expresionAttr = (VariableAttr) visit(ctx.expression());
+            if (!expresionAttr.equals(variableAttr)) {
+                showError(String.format(ERROR_EXPECTING_EXPRESSION, variableAttr, expresionAttr),
+                        ctx.start.getLine(),
+                        ctx.start.getCharPositionInLine());
             }
+        } catch (ContextException ignored) {
+        }
 
         return null;
     }
