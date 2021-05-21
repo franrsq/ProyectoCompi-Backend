@@ -1,13 +1,11 @@
-package com.compi.pseudojava.context;
-
-import com.compi.pseudojava.context.attributes.Attribute;
+package com.compi.pseudojava.languaje;
 
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
-public class IdentificationTable<T extends Attribute> implements Serializable {
+public class IdentificationTable<T> implements Serializable {
     private LinkedList<Map<String, T>> scopes = new LinkedList<>();
 
     public IdentificationTable() {
@@ -41,5 +39,16 @@ public class IdentificationTable<T extends Attribute> implements Serializable {
             throw new IllegalStateException("scopes will be empty");
         }
         scopes.removeFirst();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder strBuilder = new StringBuilder();
+        for (int i = 0; i < scopes.size(); i++) {
+            strBuilder.append("\nScope ").append(i).append("\n");
+            scopes.get(i).forEach((key, value) ->
+                    strBuilder.append(key).append(": ").append(value).append("\n"));
+        }
+        return strBuilder.toString();
     }
 }

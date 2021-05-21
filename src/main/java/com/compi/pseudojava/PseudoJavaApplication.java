@@ -2,14 +2,14 @@ package com.compi.pseudojava;
 
 import com.compi.generated.PseudoJavaParser;
 import com.compi.generated.PseudoJavaScanner;
-import com.compi.pseudojava.context.ContextAnalyzer;
+import com.compi.pseudojava.languaje.context.ContextAnalyzer;
+import com.compi.pseudojava.languaje.interpreter.Interpreter;
 import com.compi.pseudojava.models.PseudoJavaErrorListener;
 import com.compi.pseudojava.models.Snippet;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import javax.persistence.criteria.CriteriaBuilder;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,7 +34,7 @@ public class PseudoJavaApplication {
     ContextAnalyzer contextAnalyzer = new ContextAnalyzer();
 
     public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
-        /*CharStream input = CharStreams.fromFileName("test.txt");
+        CharStream input = CharStreams.fromFileName("test.txt");
         PseudoJavaScanner inst = new PseudoJavaScanner(input);
         CommonTokenStream tokens = new CommonTokenStream(inst);
         PseudoJavaParser parser = new PseudoJavaParser(tokens);
@@ -46,9 +47,11 @@ public class PseudoJavaApplication {
         for (String error : errorListener.getErrors()) {
             System.out.println(error);
         }
+        Interpreter interpreter = new Interpreter();
+        interpreter.visit(tree);
         /*java.util.concurrent.Future<JFrame> treeGUI = org.antlr.v4.gui.Trees.inspect(tree, parser);
             treeGUI.get().setVisible(true);*/
-        SpringApplication.run(PseudoJavaApplication.class, args);
+        //SpringApplication.run(PseudoJavaApplication.class, args);
     }
 
     @Bean

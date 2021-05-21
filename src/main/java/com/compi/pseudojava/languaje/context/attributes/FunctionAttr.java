@@ -1,4 +1,6 @@
-package com.compi.pseudojava.context.attributes;
+package com.compi.pseudojava.languaje.context.attributes;
+
+import com.compi.pseudojava.languaje.Attribute;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -31,6 +33,14 @@ public class FunctionAttr extends Attribute {
         }
 
         return parameters.get(parameters.keySet().toArray()[index]);
+    }
+
+    public String getParamNameByIndex(int index) {
+        if (index > parameters.size() - 1) {
+            throw new IndexOutOfBoundsException("Index is greater than parameters size");
+        }
+
+        return (String) parameters.keySet().toArray()[index];
     }
 
     public VariableAttr getReturnType() {

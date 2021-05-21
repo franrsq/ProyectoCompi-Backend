@@ -1,11 +1,12 @@
-package com.compi.pseudojava.context;
+package com.compi.pseudojava.languaje.context;
 
 import com.compi.generated.PseudoJavaParser;
 import com.compi.generated.PseudoJavaParserBaseVisitor;
-import com.compi.pseudojava.context.attributes.ClassAttr;
-import com.compi.pseudojava.context.attributes.FunctionAttr;
-import com.compi.pseudojava.context.attributes.VariableAttr;
-import com.compi.pseudojava.context.exceptions.ContextException;
+import com.compi.pseudojava.languaje.IdentificationTable;
+import com.compi.pseudojava.languaje.context.attributes.ClassAttr;
+import com.compi.pseudojava.languaje.context.attributes.FunctionAttr;
+import com.compi.pseudojava.languaje.context.attributes.VariableAttr;
+import com.compi.pseudojava.languaje.context.exceptions.ContextException;
 import org.antlr.v4.runtime.RuleContext;
 
 import java.io.*;
@@ -76,6 +77,15 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
         variables.openScope();
         classes.openScope();
         functions.openScope();
+
+        // Check if parent is function
+        if (ctx.parent instanceof PseudoJavaParser.FunctionDeclASTContext) {
+            String identifier = ((PseudoJavaParser.FunctionDeclASTContext) ctx.parent).IDENTIFIER().getText();
+            FunctionAttr function = functions.retrieveCheckAllScopes(identifier);
+            for (int i = 0; i < function.parametersSize(); i++) {
+                variables.enter(function.getParamNameByIndex(i), function.getParamByIndex(i));
+            }
+        }
 
         boolean returnStatement = false;
         for (int i = 0; i < ctx.statement().size(); i++) {
@@ -161,8 +171,9 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
                     functions.retrieveCheckAllScopes(parentFunction).enter(ctx.IDENTIFIER().getText(),
                             new VariableAttr(ctx.type().getText(), false));
                 } else if (ctx.type() instanceof PseudoJavaParser.ArrTypeASTContext) {
+                    String type = ctx.type().getText().substring(0, ctx.type().getText().indexOf('[')).trim();
                     functions.retrieveCheckAllScopes(parentFunction).enter(ctx.IDENTIFIER().getText(),
-                            new VariableAttr(ctx.type().getText(), true));
+                            new VariableAttr(type, true));
                 } else {
                     if (classes.retrieveCheckAllScopes(ctx.type().getText()) != null) {
                         functions.retrieveCheckAllScopes(parentFunction).enter(ctx.IDENTIFIER().getText(),
@@ -245,10 +256,14 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
     public Object visitPrintAST(PseudoJavaParser.PrintASTContext ctx) {
         try {
             VariableAttr type = (VariableAttr) visit(ctx.expression());
-            if (type.getType().equals("string") && !type.isArray()) {
+            if ((type.getType().equals("int") || type.getType().equals("real")
+                    || type.getType().equals("boolean") || type.getType().equals("char")
+                    || type.getType().equals("string"))
+                    && !type.isArray()) {
                 return null;
             }
-            showError(String.format(ERROR_EXPECTING_EXPRESSION, "string", type),
+            showError(String.format(ERROR_EXPECTING_EXPRESSION,
+                    "primitive (int, real, boolean, char, string)", type),
                     ctx.start.getLine(),
                     ctx.start.getCharPositionInLine());
         } catch (ContextException ignored) {

@@ -1,4 +1,6 @@
-package com.compi.pseudojava.context.attributes;
+package com.compi.pseudojava.languaje.context.attributes;
+
+import com.compi.pseudojava.languaje.Attribute;
 
 import java.util.HashMap;
 import java.util.Map;

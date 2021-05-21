@@ -1,4 +1,4 @@
-package com.compi.pseudojava.context.attributes;
+package com.compi.pseudojava.languaje;
 
 import java.io.Serializable;
 
