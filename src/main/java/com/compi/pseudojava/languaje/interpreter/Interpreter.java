@@ -3,17 +3,28 @@ package com.compi.pseudojava.languaje.interpreter;
 import com.compi.generated.PseudoJavaParser;
 import com.compi.generated.PseudoJavaParserBaseVisitor;
 import com.compi.pseudojava.languaje.IdentificationTable;
+import com.compi.pseudojava.languaje.interpreter.attributes.ClassAttr;
 import com.compi.pseudojava.languaje.interpreter.attributes.FunctionAttr;
-import com.compi.pseudojava.languaje.interpreter.instances.Instance;
-import com.compi.pseudojava.languaje.interpreter.instances.PrimitiveInstance;
+import com.compi.pseudojava.languaje.interpreter.exceptions.CodeException;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
+    private static final String VARIABLE_UNDEFINED_EXCEPTION = "Element %s is undefined";
+
     private IdentificationTable<FunctionAttr> functionsTable = new IdentificationTable<>();
-    private IdentificationTable<Instance> storage = new IdentificationTable<>();
+    private IdentificationTable<ClassAttr> classesTable = new IdentificationTable<>();
+    private IdentificationTable<Instance<Object>> storage = new IdentificationTable<>();
 
     @Override
     public Object visitProgramAST(PseudoJavaParser.ProgramASTContext ctx) {
-        return super.visitProgramAST(ctx);
+        try {
+            super.visitProgramAST(ctx);
+        } catch (CodeException ex) {
+            output(ex.getMessage());
+        }
+        return null;
     }
 
     @Override
@@ -25,8 +36,10 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
     public Object visitBlockAST(PseudoJavaParser.BlockASTContext ctx) {
         functionsTable.openScope();
         storage.openScope();
+        classesTable.openScope();
         Object object = super.visitBlockAST(ctx);
-        storage.openScope();
+        classesTable.closeScope();
+        storage.closeScope();
         functionsTable.closeScope();
         return object;
     }
@@ -52,12 +65,25 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitWhileAST(PseudoJavaParser.WhileASTContext ctx) {
-        return super.visitWhileAST(ctx);
+        boolean expressionResult = (boolean) visit(ctx.expression());
+        while (expressionResult) {
+            visit(ctx.block());
+            expressionResult = (boolean) visit(ctx.expression());
+        }
+        return null;
     }
 
     @Override
     public Object visitIfAST(PseudoJavaParser.IfASTContext ctx) {
-        return super.visitIfAST(ctx);
+        boolean expressionResult = (boolean) visit(ctx.expression());
+        if (expressionResult) {
+            visit(ctx.block(0));
+        } else {
+            if (ctx.block(1) != null) {
+                visit(ctx.block(1));
+            }
+        }
+        return null;
     }
 
     @Override
@@ -73,19 +99,36 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitClassDeclAST(PseudoJavaParser.ClassDeclASTContext ctx) {
+        classesTable.enter(ctx.IDENTIFIER().getText(), new ClassAttr());
         return super.visitClassDeclAST(ctx);
     }
 
     @Override
     public Object visitVariableDeclAST(PseudoJavaParser.VariableDeclASTContext ctx) {
-        Instance value = null;
-        if (ctx.expression() != null) {
-            value = assignVariable(ctx.type(), ctx.expression());
+        if (ctx.parent instanceof PseudoJavaParser.ClassDeclASTContext) {
+            PseudoJavaParser.ClassDeclASTContext classDeclASTContext =
+                    (PseudoJavaParser.ClassDeclASTContext) ctx.parent;
+            ClassAttr classAttr = classesTable.retrieve(classDeclASTContext.IDENTIFIER().getText());
+            classAttr.addVarDeclaration(ctx);
         } else {
-            value = createDefaultInstance(ctx.type().getText());
-        }
+            Instance<Object> instance = null;
+            if (ctx.expression() != null) {
+                Object value = visit(ctx.expression());
+                if (ctx.type() instanceof PseudoJavaParser.SmpTypeASTContext) {
+                    instance = new Instance<>(value);
+                } else if (ctx.type() instanceof PseudoJavaParser.ArrTypeASTContext) {
 
-        storage.enter(ctx.IDENTIFIER().getText(), value);
+                } else {
+                    instance = new Instance<>(value);
+                }
+            } else {
+                instance = createDefaultInstance(ctx.type().getText());
+            }
+            if (ctx.parent instanceof PseudoJavaParser.AllocASTContext) {
+                return instance;
+            }
+            storage.enter(ctx.IDENTIFIER().getText(), instance);
+        }
         return null;
     }
 
@@ -116,7 +159,14 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitAssignmentAST(PseudoJavaParser.AssignmentASTContext ctx) {
-        return super.visitAssignmentAST(ctx);
+        Instance<Object> instance = storage.retrieveCheckAllScopes(ctx.IDENTIFIER(0).getText());
+        // It's accessing to a class member
+        if (ctx.IDENTIFIER(1) != null) {
+            instance = ((Map<String, Instance<Object>>) instance.getValue())
+                    .get(ctx.IDENTIFIER(1).getText());
+        }
+        instance.setValue(visit(ctx.expression()));
+        return null;
     }
 
     @Override
@@ -156,6 +206,7 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
                     return (Float) ob1 >= (Float) ob2;
                 }
                 return (Integer) ob1 >= (Integer) ob2;
+            // TODO: arrays and objects references
             case "==":
                 return ob1.equals(ob2);
             case "!=":
@@ -241,7 +292,14 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitObjectFactAST(PseudoJavaParser.ObjectFactASTContext ctx) {
-        return super.visitObjectFactAST(ctx);
+        Instance<Object> instance = storage.retrieveCheckAllScopes(ctx.IDENTIFIER(0).getText());
+        instance = ((Map<String, Instance<Object>>) instance.getValue())
+                .get(ctx.IDENTIFIER(1).getText());
+        if (instance.getValue() == null) {
+            throw new CodeException(String.format(VARIABLE_UNDEFINED_EXCEPTION, ctx.IDENTIFIER(0)),
+                    ctx.start.getLine(), ctx.IDENTIFIER(0).getSymbol().getCharPositionInLine() + 1);
+        }
+        return instance.getValue();
     }
 
     @Override
@@ -281,12 +339,31 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitUnaryAST(PseudoJavaParser.UnaryASTContext ctx) {
-        return super.visitUnaryAST(ctx);
+        Object ob = visit(ctx.expression());
+
+        if (ctx.SUM() != null) {
+            return ob;
+        } else if (ctx.MINUS() != null) {
+            if (ob instanceof Integer) {
+                return -(int) ob;
+            }
+            return -(float) ob;
+        } else if (ctx.NEAGTE() != null) {
+            return !(boolean) ob;
+        }
+        throw new RuntimeException("Unregistered unary operator");
     }
 
     @Override
     public Object visitAllocAST(PseudoJavaParser.AllocASTContext ctx) {
-        return super.visitAllocAST(ctx);
+        ClassAttr classAttr = classesTable.retrieve(ctx.IDENTIFIER().getText());
+        Map<String, Instance<Object>> classValue = new HashMap<>();
+
+        for (PseudoJavaParser.VariableDeclASTContext varDecl : classAttr.getVarDeclarations()) {
+            varDecl.parent = ctx;
+            classValue.put(varDecl.IDENTIFIER().getText(), (Instance<Object>) visit(varDecl));
+        }
+        return classValue;
     }
 
     @Override
@@ -353,7 +430,9 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
     @Override
     public Object visitStrLiteralAST(PseudoJavaParser.StrLiteralASTContext ctx) {
         String str = ctx.getText();
-        return str.substring(1, str.length() - 1).replace("\\\"", "\"");
+        return str.substring(1, str.length() - 1)
+                .replace("\\\"", "\"")
+                .replaceAll("(?<!\\\\)\\\\n", "\n");
     }
 
     @Override
@@ -365,31 +444,21 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
         return tokenText.charAt(1);
     }
 
-    private Instance assignVariable(PseudoJavaParser.TypeContext type,
-                                    PseudoJavaParser.ExpressionContext expression) {
-        Object value = visit(expression);
-        if (type instanceof PseudoJavaParser.SmpTypeASTContext) {
-            return new PrimitiveInstance(value);
-        }
-
-        throw new RuntimeException("Type: " + type.getText() + " is not a valid type");
-    }
-
-    private Instance createDefaultInstance(String type) {
+    private Instance<Object> createDefaultInstance(String type) {
         switch (type) {
             case "boolean":
-                return new PrimitiveInstance(false);
+                return new Instance<>(false);
             case "real":
-                return new PrimitiveInstance(0f);
+                return new Instance<>(0f);
             case "char":
-                return new PrimitiveInstance(' ');
+                return new Instance<>(' ');
             case "int":
-                return new PrimitiveInstance(0);
+                return new Instance<>(0);
             case "string":
-                return new PrimitiveInstance("");
+                return new Instance<>("");
         }
 
-        throw new RuntimeException("Unknown primitive: " + type);
+        return new Instance<>(null);
     }
 
     private void output(String str) {

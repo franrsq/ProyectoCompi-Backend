@@ -1,7 +1,5 @@
 package com.compi.pseudojava.languaje.interpreter;
 
-import com.compi.pseudojava.languaje.interpreter.instances.Instance;
-
 /*
 class Point {
     int x = 5;

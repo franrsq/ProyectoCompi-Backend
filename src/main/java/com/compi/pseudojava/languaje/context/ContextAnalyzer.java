@@ -324,7 +324,12 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
                 }
             } else {
                 if (classes.retrieveCheckAllScopes(ctx.type().getText()) != null) {
-                    variables.enter(identifier, new VariableAttr(ctx.type().getText(), false));
+                    if (parentClass != null) {
+                        parentClass.enter(identifier,
+                                new VariableAttr(ctx.type().getText(), false));
+                    }
+                    variables.enter(identifier,
+                            new VariableAttr(ctx.type().getText(), false));
                 } else {
                     showError(String.format(ERROR_NOT_FOUND, "class " + ctx.type().getText()),
                             ctx.start.getLine(),
@@ -517,7 +522,7 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
                     ctx.start.getCharPositionInLine());
             throw new ContextException("Variable not found");
         }
-        // It's not an instance of a class
+        // It's not an instance of the class
         ClassAttr classAttr = classes.retrieveCheckAllScopes(instance.getType());
         if (classAttr == null) {
             showError(String.format(ERROR_NOT_INSTANCE, "Variable " + instanceId),
@@ -529,7 +534,7 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
         String memberId = ctx.IDENTIFIER(1).getText();
         VariableAttr member = classAttr.retrieve(memberId);
         if (member == null) {
-            showError(String.format(ERROR_NOT_MEMBER_CLASS, "Variable " + instanceId, instance.getType()),
+            showError(String.format(ERROR_NOT_MEMBER_CLASS, "Variable " + memberId, instance.getType()),
                     ctx.start.getLine(),
                     ctx.start.getCharPositionInLine());
             throw new ContextException("Variable not found in class");

@@ -2,7 +2,7 @@ package com.compi.pseudojava.languaje.interpreter.attributes;
 
 import com.compi.generated.PseudoJavaParser;
 import com.compi.pseudojava.languaje.Attribute;
-import com.compi.pseudojava.languaje.interpreter.instances.Instance;
+import com.compi.pseudojava.languaje.interpreter.Instance;
 
 import java.util.Map;
 

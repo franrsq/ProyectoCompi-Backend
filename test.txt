@@ -1,3 +1,16 @@
-int x = 5 + 8;
-int y = x + 8;
-print(x);
+class Point {
+    int x;
+    int y;
+};
+
+class B {
+    Point p = new Point();
+};
+
+Point a = new Point();
+a.x = 6;
+
+B b = new B();
+a = b.p;
+
+print(a.x);
