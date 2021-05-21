@@ -12,6 +12,7 @@ import java.util.Map;
 
 public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
     private static final String VARIABLE_UNDEFINED_EXCEPTION = "Element %s is undefined";
+    private static final String ARRAY_INDEX_OUT_OF_BOUNDS_EXCEPTION = "Array index %s for %s is out of bounds";
 
     private IdentificationTable<FunctionAttr> functionsTable = new IdentificationTable<>();
     private IdentificationTable<ClassAttr> classesTable = new IdentificationTable<>();
@@ -37,11 +38,29 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
         functionsTable.openScope();
         storage.openScope();
         classesTable.openScope();
-        Object object = super.visitBlockAST(ctx);
+
+        if (ctx.parent instanceof PseudoJavaParser.FunctionDeclASTContext) {
+            String funcName = ((PseudoJavaParser.FunctionDeclASTContext) ctx.parent).IDENTIFIER().getText();
+            FunctionAttr functionAttr = functionsTable.retrieveCheckAllScopes(funcName);
+            for (int i = 0; i < functionAttr.getParametersSize(); i++) {
+                storage.enter(functionAttr.getParamNameByIndex(i), functionAttr.getParamByIndex(i));
+            }
+        }
+
+        Object returnInstance = null;
+        for (int i = 0; i < ctx.statement().size(); i++) {
+            if (i == ctx.statement().size() - 1
+                    && ctx.parent instanceof PseudoJavaParser.FunctionDeclASTContext) {
+                returnInstance = visit(ctx.statement(i).return_statement());
+            } else {
+                visit(ctx.statement(i));
+            }
+        }
+
         classesTable.closeScope();
         storage.closeScope();
         functionsTable.closeScope();
-        return object;
+        return returnInstance;
     }
 
     @Override
@@ -60,7 +79,11 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitFormalParamAST(PseudoJavaParser.FormalParamASTContext ctx) {
-        return super.visitFormalParamAST(ctx);
+        String funcName = ((PseudoJavaParser.FunctionDeclASTContext) ctx.parent.parent)
+                .IDENTIFIER().getText();
+        functionsTable.retrieve(funcName).enter(ctx.IDENTIFIER().getText(),
+                createDefaultInstance(ctx.type().getText()));
+        return null;
     }
 
     @Override
@@ -88,7 +111,7 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitReturnAST(PseudoJavaParser.ReturnASTContext ctx) {
-        return super.visitReturnAST(ctx);
+        return visit(ctx.expression());
     }
 
     @Override
@@ -114,13 +137,7 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
             Instance<Object> instance = null;
             if (ctx.expression() != null) {
                 Object value = visit(ctx.expression());
-                if (ctx.type() instanceof PseudoJavaParser.SmpTypeASTContext) {
-                    instance = new Instance<>(value);
-                } else if (ctx.type() instanceof PseudoJavaParser.ArrTypeASTContext) {
-
-                } else {
-                    instance = new Instance<>(value);
-                }
+                instance = new Instance<>(value);
             } else {
                 instance = createDefaultInstance(ctx.type().getText());
             }
@@ -171,7 +188,22 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitArrayAssignmentAST(PseudoJavaParser.ArrayAssignmentASTContext ctx) {
-        return super.visitArrayAssignmentAST(ctx);
+        Instance<Object> arrInstance = storage.retrieveCheckAllScopes(ctx.IDENTIFIER().getText());
+        if (arrInstance == null) {
+            throw new CodeException(String.format(VARIABLE_UNDEFINED_EXCEPTION, ctx.IDENTIFIER()),
+                    ctx.start.getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine() + 1);
+        }
+        Object[] array = (Object[]) arrInstance.getValue();
+        int index = (int) visit(ctx.expression(0));
+
+        if (index >= array.length) {
+            throw new CodeException(String.format(ARRAY_INDEX_OUT_OF_BOUNDS_EXCEPTION,
+                    index, ctx.IDENTIFIER()),
+                    ctx.start.getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine() + 1);
+        }
+
+        array[index] = visit(ctx.expression(1));
+        return null;
     }
 
     @Override
@@ -368,7 +400,17 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitArrayAllocAST(PseudoJavaParser.ArrayAllocASTContext ctx) {
-        return super.visitArrayAllocAST(ctx);
+        return createArray(ctx.simple_type().getText(), (int) visit(ctx.expression()));
+    }
+
+    Object[] createArray(String type, int size) {
+        Object[] objArr = new Object[size];
+
+        for (int i = 0; i < objArr.length; i++) {
+            objArr[i] = getDefaultValue(type);
+        }
+
+        return objArr;
     }
 
     @Override
@@ -379,22 +421,51 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
     @Override
     public Object visitFunctionCallAST(PseudoJavaParser.FunctionCallASTContext ctx) {
         FunctionAttr function = functionsTable.retrieveCheckAllScopes(ctx.IDENTIFIER().getText());
+        if (ctx.actual_params() != null) {
+            visit(ctx.actual_params());
+        }
         return visit(function.getContext().block());
     }
 
     @Override
     public Object visitActualParamsAST(PseudoJavaParser.ActualParamsASTContext ctx) {
-        return super.visitActualParamsAST(ctx);
+        String funcName = ((PseudoJavaParser.FunctionCallASTContext) ctx.parent).IDENTIFIER().getText();
+        FunctionAttr function = functionsTable.retrieveCheckAllScopes(funcName);
+
+        for (int i = 0; i < ctx.expression().size(); i++) {
+            function.getParamByIndex(i).setValue(visit(ctx.expression(i)));
+        }
+
+        return null;
     }
 
     @Override
     public Object visitArrayLookupAST(PseudoJavaParser.ArrayLookupASTContext ctx) {
-        return super.visitArrayLookupAST(ctx);
+        Instance<Object> arrInstance = storage.retrieveCheckAllScopes(ctx.IDENTIFIER().getText());
+        if (arrInstance == null) {
+            throw new CodeException(String.format(VARIABLE_UNDEFINED_EXCEPTION, ctx.IDENTIFIER()),
+                    ctx.start.getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine() + 1);
+        }
+        Object[] array = (Object[]) arrInstance.getValue();
+        int index = (int) visit(ctx.expression());
+
+        if (index >= array.length) {
+            throw new CodeException(String.format(ARRAY_INDEX_OUT_OF_BOUNDS_EXCEPTION,
+                    index, ctx.IDENTIFIER()),
+                    ctx.start.getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine() + 1);
+        }
+
+        return array[index];
     }
 
     @Override
     public Object visitArrayLengthAST(PseudoJavaParser.ArrayLengthASTContext ctx) {
-        return super.visitArrayLengthAST(ctx);
+        Instance<Object> arrInstance = storage.retrieveCheckAllScopes(ctx.IDENTIFIER().getText());
+        if (arrInstance == null) {
+            throw new CodeException(String.format(VARIABLE_UNDEFINED_EXCEPTION, ctx.IDENTIFIER()),
+                    ctx.start.getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine() + 1);
+        }
+        return ((Object[]) arrInstance.getValue()).length;
     }
 
     @Override
@@ -444,21 +515,25 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
         return tokenText.charAt(1);
     }
 
-    private Instance<Object> createDefaultInstance(String type) {
+    private Object getDefaultValue(String type) {
         switch (type) {
             case "boolean":
-                return new Instance<>(false);
+                return false;
             case "real":
-                return new Instance<>(0f);
+                return 0f;
             case "char":
-                return new Instance<>(' ');
+                return ' ';
             case "int":
-                return new Instance<>(0);
+                return 0;
             case "string":
-                return new Instance<>("");
+                return "";
         }
 
-        return new Instance<>(null);
+        return null;
+    }
+
+    private Instance<Object> createDefaultInstance(String type) {
+        return new Instance<>(getDefaultValue(type));
     }
 
     private void output(String str) {

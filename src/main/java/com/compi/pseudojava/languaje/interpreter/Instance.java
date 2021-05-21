@@ -1,5 +1,7 @@
 package com.compi.pseudojava.languaje.interpreter;
 
+import java.util.Arrays;
+
 public class Instance<V> {
     private V value;
 
@@ -17,6 +19,11 @@ public class Instance<V> {
 
     @Override
     public String toString() {
+        if (value instanceof Object[]) {
+            return "Instance{" +
+                    "value=" + Arrays.toString((Object[]) value) +
+                    '}';
+        }
         return "Instance{" +
                 "value=" + value +
                 '}';
