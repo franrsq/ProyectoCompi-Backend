@@ -4,7 +4,7 @@ options {
     tokenVocab = PseudoJavaScanner;
 }
 
-program                     : (statement)*                          #programAST             ;
+program                     : (statement)* (EOF)                                            #programAST;
 statement                   : variable_declaration SEMICOLON
         | class_declaration SEMICOLON
         | assignment SEMICOLON

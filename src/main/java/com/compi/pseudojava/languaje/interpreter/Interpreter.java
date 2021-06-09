@@ -7,16 +7,21 @@ import com.compi.pseudojava.languaje.interpreter.attributes.ClassAttr;
 import com.compi.pseudojava.languaje.interpreter.attributes.FunctionAttr;
 import com.compi.pseudojava.languaje.interpreter.exceptions.CodeException;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
     private static final String VARIABLE_UNDEFINED_EXCEPTION = "Element %s is undefined";
     private static final String ARRAY_INDEX_OUT_OF_BOUNDS_EXCEPTION = "Array index %s for %s is out of bounds";
+    private static final String NEGATIVE_ARRAY_SIZE_EXCEPTION = "Negative array size: %s";
 
     private IdentificationTable<FunctionAttr> functionsTable = new IdentificationTable<>();
     private IdentificationTable<ClassAttr> classesTable = new IdentificationTable<>();
     private IdentificationTable<Instance<Object>> storage = new IdentificationTable<>();
+
+    private final List<String> output = new ArrayList<>();
 
     @Override
     public Object visitProgramAST(PseudoJavaParser.ProgramASTContext ctx) {
@@ -43,17 +48,17 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
             String funcName = ((PseudoJavaParser.FunctionDeclASTContext) ctx.parent).IDENTIFIER().getText();
             FunctionAttr functionAttr = functionsTable.retrieveCheckAllScopes(funcName);
             for (int i = 0; i < functionAttr.getParametersSize(); i++) {
-                storage.enter(functionAttr.getParamNameByIndex(i), functionAttr.getParamByIndex(i));
+                storage.enter(functionAttr.getParamNameByIndex(i),
+                        new Instance<>(functionAttr.getParamByIndex(i).getValue()));
             }
         }
 
         Object returnInstance = null;
-        for (int i = 0; i < ctx.statement().size(); i++) {
-            if (i == ctx.statement().size() - 1
-                    && ctx.parent instanceof PseudoJavaParser.FunctionDeclASTContext) {
+        for (int i = 0; i < ctx.statement().size() && returnInstance == null; i++) {
+            if (ctx.statement(i).return_statement() != null) {
                 returnInstance = visit(ctx.statement(i).return_statement());
             } else {
-                visit(ctx.statement(i));
+                returnInstance = visit(ctx.statement(i));
             }
         }
 
@@ -89,24 +94,26 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
     @Override
     public Object visitWhileAST(PseudoJavaParser.WhileASTContext ctx) {
         boolean expressionResult = (boolean) visit(ctx.expression());
-        while (expressionResult) {
-            visit(ctx.block());
+        Object returnValue = null;
+        while (expressionResult && returnValue == null) {
+            returnValue = visit(ctx.block());
             expressionResult = (boolean) visit(ctx.expression());
         }
-        return null;
+        return returnValue;
     }
 
     @Override
     public Object visitIfAST(PseudoJavaParser.IfASTContext ctx) {
         boolean expressionResult = (boolean) visit(ctx.expression());
+        Object returnValue = null;
         if (expressionResult) {
-            visit(ctx.block(0));
+            returnValue = visit(ctx.block(0));
         } else {
             if (ctx.block(1) != null) {
-                visit(ctx.block(1));
+                returnValue = visit(ctx.block(1));
             }
         }
-        return null;
+        return returnValue;
     }
 
     @Override
@@ -238,7 +245,6 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
                     return (Float) ob1 >= (Float) ob2;
                 }
                 return (Integer) ob1 >= (Integer) ob2;
-            // TODO: arrays and objects references
             case "==":
                 return ob1.equals(ob2);
             case "!=":
@@ -388,7 +394,7 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitAllocAST(PseudoJavaParser.AllocASTContext ctx) {
-        ClassAttr classAttr = classesTable.retrieve(ctx.IDENTIFIER().getText());
+        ClassAttr classAttr = classesTable.retrieveCheckAllScopes(ctx.IDENTIFIER().getText());
         Map<String, Instance<Object>> classValue = new HashMap<>();
 
         for (PseudoJavaParser.VariableDeclASTContext varDecl : classAttr.getVarDeclarations()) {
@@ -400,10 +406,14 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitArrayAllocAST(PseudoJavaParser.ArrayAllocASTContext ctx) {
-        return createArray(ctx.simple_type().getText(), (int) visit(ctx.expression()));
+        return createArray(ctx.simple_type().getText(), (int) visit(ctx.expression()), ctx);
     }
 
-    Object[] createArray(String type, int size) {
+    Object[] createArray(String type, int size, PseudoJavaParser.ArrayAllocASTContext ctx) {
+        if (size < 0) {
+            throw new CodeException(String.format(NEGATIVE_ARRAY_SIZE_EXCEPTION, size),
+                    ctx.start.getLine(), ctx.start.getCharPositionInLine() + 1);
+        }
         Object[] objArr = new Object[size];
 
         for (int i = 0; i < objArr.length; i++) {
@@ -420,7 +430,17 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
 
     @Override
     public Object visitFunctionCallAST(PseudoJavaParser.FunctionCallASTContext ctx) {
-        FunctionAttr function = functionsTable.retrieveCheckAllScopes(ctx.IDENTIFIER().getText());
+        String funcName = ctx.IDENTIFIER().getText();
+        if (funcName.equals("chr")) {
+            return (char) ((int) visit(ctx.actual_params().getChild(0)));
+        }
+        if (funcName.equals("ord")) {
+            return (int) ((char) visit(ctx.actual_params().getChild(0)));
+        }
+        if (funcName.equals("len")) {
+            return ((String) visit(ctx.actual_params().getChild(0))).length();
+        }
+        FunctionAttr function = functionsTable.retrieveCheckAllScopes(funcName);
         if (ctx.actual_params() != null) {
             visit(ctx.actual_params());
         }
@@ -538,5 +558,10 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
 
     private void output(String str) {
         System.out.print(str);
+        output.add(str);
+    }
+
+    public List<String> getOutput() {
+        return output;
     }
 }

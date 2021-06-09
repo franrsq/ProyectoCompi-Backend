@@ -51,11 +51,9 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
         FunctionAttr chr = new FunctionAttr(new VariableAttr("char", false));
         chr.enter("i", new VariableAttr("int", false));
         FunctionAttr ord = new FunctionAttr(new VariableAttr("int", false));
-        chr.enter("ch", new VariableAttr("char", false));
-
-        // TODO: preguntar
+        ord.enter("ch", new VariableAttr("char", false));
         FunctionAttr len = new FunctionAttr(new VariableAttr("int", false));
-        chr.enter("a", new VariableAttr("string", false));
+        len.enter("a", new VariableAttr("string", false));
 
         functions.enter("chr", chr);
         functions.enter("ord", ord);
@@ -91,8 +89,10 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
         for (int i = 0; i < ctx.statement().size(); i++) {
             PseudoJavaParser.StatementContext stContext = ctx.statement(i);
 
+            Object hasReturnObj = visit(stContext);
             // It's return
-            if (stContext.return_statement() != null) {
+            if (stContext.return_statement() != null
+                    || (hasReturnObj instanceof Boolean && (boolean) hasReturnObj)) {
                 // It's not the last line of the block
                 if (i != ctx.statement().size() - 1) {
                     showError(ERROR_RETURN_LAST,
@@ -101,7 +101,6 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
                 }
                 returnStatement = true;
             }
-            visit(stContext);
         }
 
         variables.closeScope();
@@ -214,13 +213,14 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
             }
         } catch (ContextException ignored) {
         }
+        boolean ifHasReturn = false, elseHasReturn = false;
         if (ctx.block(0) != null) {
-            visit(ctx.block(0));
+            ifHasReturn = (boolean) visit(ctx.block(0));
         }
         if (ctx.block(1) != null) {
-            visit(ctx.block(1));
+            elseHasReturn = (boolean) visit(ctx.block(1));
         }
-        return null;
+        return ifHasReturn && elseHasReturn;
     }
 
     @Override
@@ -249,7 +249,7 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
         } catch (ContextException ignored) {
         }
 
-        return null;
+        return true;
     }
 
     @Override

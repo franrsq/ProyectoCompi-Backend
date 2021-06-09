@@ -10,6 +10,7 @@ import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
+import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
@@ -20,9 +21,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import javax.persistence.criteria.CriteriaBuilder;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -34,7 +36,7 @@ public class PseudoJavaApplication {
     ContextAnalyzer contextAnalyzer = new ContextAnalyzer();
 
     public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
-        CharStream input = CharStreams.fromFileName("test.txt");
+        /*CharStream input = CharStreams.fromFileName("test.txt");
         PseudoJavaScanner inst = new PseudoJavaScanner(input);
         CommonTokenStream tokens = new CommonTokenStream(inst);
         PseudoJavaParser parser = new PseudoJavaParser(tokens);
@@ -48,10 +50,10 @@ public class PseudoJavaApplication {
             System.out.println(error);
         }
         Interpreter interpreter = new Interpreter();
-        interpreter.visit(tree);
+        interpreter.visit(tree);*/
         /*java.util.concurrent.Future<JFrame> treeGUI = org.antlr.v4.gui.Trees.inspect(tree, parser);
             treeGUI.get().setVisible(true);*/
-        //SpringApplication.run(PseudoJavaApplication.class, args);
+        SpringApplication.run(PseudoJavaApplication.class, args);
     }
 
     @Bean
@@ -86,13 +88,23 @@ public class PseudoJavaApplication {
         ParseTree tree = parser.program();
         ContextAnalyzer backup = contextAnalyzer.makeClone();
         backup.visit(tree);
+
         if (backup.getErrors().isEmpty()) {
             contextAnalyzer = backup;
         }
 
-        HashMap<String, Object> map = new HashMap<>(1);
-        map.put("errors", Stream.concat(errorListener.getErrors().stream(), backup.getErrors().stream())
-                .collect(Collectors.toList()));
+        List<String> output = new ArrayList<>();
+        List<String> errors = Stream.concat(errorListener.getErrors().stream(), backup.getErrors().stream())
+                .collect(Collectors.toList());
+        if (errors.isEmpty()) {
+            Interpreter interpreter = new Interpreter();
+            interpreter.visit(tree);
+            output = interpreter.getOutput();
+        }
+
+        HashMap<String, Object> map = new HashMap<>(2);
+        map.put("errors", errors);
+        map.put("output", output);
         return new ResponseEntity<>(map, HttpStatus.OK);
     }
 

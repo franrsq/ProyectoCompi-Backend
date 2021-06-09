@@ -1,3 +1,11 @@
-int[] x = new int[5];
-x[0] = 5;
-print(x[0]);
+int h() {
+    if (true) {
+        if (true) {
+            return 1;
+        } else {
+            return 2;
+        }
+    } else {
+        return 1;
+    }
+}
