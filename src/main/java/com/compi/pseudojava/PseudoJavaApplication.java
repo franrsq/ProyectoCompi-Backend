@@ -36,7 +36,7 @@ public class PseudoJavaApplication {
     ContextAnalyzer contextAnalyzer = new ContextAnalyzer();
 
     public static void main(String[] args) throws IOException, ExecutionException, InterruptedException {
-        CharStream input = CharStreams.fromFileName("test.txt");
+        /*CharStream input = CharStreams.fromFileName("test.txt");
         PseudoJavaScanner inst = new PseudoJavaScanner(input);
         CommonTokenStream tokens = new CommonTokenStream(inst);
         PseudoJavaParser parser = new PseudoJavaParser(tokens);
@@ -50,10 +50,10 @@ public class PseudoJavaApplication {
             System.out.println(error);
         }
         Interpreter interpreter = new Interpreter();
-        interpreter.visit(tree);
+        interpreter.visit(tree);*/
         /*java.util.concurrent.Future<JFrame> treeGUI = org.antlr.v4.gui.Trees.inspect(tree, parser);
             treeGUI.get().setVisible(true);*/
-        //SpringApplication.run(PseudoJavaApplication.class, args);
+        SpringApplication.run(PseudoJavaApplication.class, args);
     }
 
     @Bean
