@@ -203,7 +203,7 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
         Object[] array = (Object[]) arrInstance.getValue();
         int index = (int) visit(ctx.expression(0));
 
-        if (index >= array.length) {
+        if (index >= array.length || index < 0) {
             throw new CodeException(String.format(ARRAY_INDEX_OUT_OF_BOUNDS_EXCEPTION,
                     index, ctx.IDENTIFIER()),
                     ctx.start.getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine() + 1);
@@ -469,7 +469,7 @@ public class Interpreter extends PseudoJavaParserBaseVisitor<Object> {
         Object[] array = (Object[]) arrInstance.getValue();
         int index = (int) visit(ctx.expression());
 
-        if (index >= array.length) {
+        if (index >= array.length || index < 0) {
             throw new CodeException(String.format(ARRAY_INDEX_OUT_OF_BOUNDS_EXCEPTION,
                     index, ctx.IDENTIFIER()),
                     ctx.start.getLine(), ctx.IDENTIFIER().getSymbol().getCharPositionInLine() + 1);

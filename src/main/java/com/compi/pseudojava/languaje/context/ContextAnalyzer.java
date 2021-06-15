@@ -339,7 +339,13 @@ public class ContextAnalyzer extends PseudoJavaParserBaseVisitor<Object> impleme
         }
 
         visit(ctx.type());
-        VariableAttr variableAttr = variables.retrieveCheckAllScopes(identifier);
+
+        VariableAttr variableAttr;
+        if (parentClass == null) {
+            variableAttr = variables.retrieveCheckAllScopes(identifier);
+        } else {
+            variableAttr = parentClass.retrieve(identifier);
+        }
         if (ctx.expression() != null) {
             try {
                 VariableAttr expresionAttr = (VariableAttr) visit(ctx.expression());
